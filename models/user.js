@@ -11,9 +11,9 @@ const userSchema = new mongoose.Schema({
 
   systemRol: {
     type: String,
-    minlength: 2,
-    maxlength: 30,
+    enum: ["colaborador", "admin"],
     default: "colaborador",
+    required: true,
   },
 
   avatar: {

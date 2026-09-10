@@ -22,10 +22,10 @@ router.post(
   createProject,
 )
 
-// Muestra tarjetas
+// Muestra proyectos
 router.get("/projects", showProject)
 
-// Elimina tarjeta
+// Elimina proyecto
 router.delete(
   "/projects/:projectId",
   celebrate({
@@ -36,13 +36,13 @@ router.delete(
   deleteProject,
 )
 
-// Actualizar perfil
+// Actualizar proyecto
 router.patch(
-  "/projects/me",
+  "/projects/:projectId",
   celebrate({
     body: Joi.object().keys({
-      titleProject: Joi.string().min(2).max(30),
-      descriptionProject: Joi.string().min(2).max(30),
+      titleProject: Joi.string().min(2),
+      descriptionProject: Joi.string().min(2),
     }),
   }),
   actProject,

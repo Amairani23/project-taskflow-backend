@@ -9,6 +9,7 @@ import { requestLogger, errorLogger } from "./middlewares/logger.js"
 import usersRouter from "./routes/usersRouter.js"
 import cardsRouter from "./routes/cardsRouter.js"
 import projectRouter from "./routes/projectRouter.js"
+import taskRouter from "./routes/taskRouter.js"
 
 import "dotenv/config"
 
@@ -44,6 +45,7 @@ app.use(auth)
 app.use("/", usersRouter)
 app.use("/", cardsRouter)
 app.use("/", projectRouter)
+app.use("/", taskRouter)
 
 app.use(errorLogger)
 app.use(errorHandler)

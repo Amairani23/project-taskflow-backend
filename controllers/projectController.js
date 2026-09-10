@@ -42,7 +42,10 @@ export const deleteProject = async (req, res, next) => {
       throw error
     })
 
-    if (project.ownerId.toString() !== req.user._id.toString()) {
+    if (
+      req.user.systemRol !== "admin" &&
+      project.ownerId.toString() !== req.user._id.toString()
+    ) {
       return res
         .status(ERROR_FORBIDDEN)
         .send({ message: "You cannot delete another user's project." })
@@ -58,17 +61,28 @@ export const deleteProject = async (req, res, next) => {
 
 export const actProject = async (req, res, next) => {
   try {
+    const { projectId } = req.params
     const { titleProject, descriptionProject } = req.body
 
-    const project = await Project.findByIdAndUpdate(
-      req.project._id,
-      { titleProject, descriptionProject },
-      { new: true, runValidators: true },
-    ).orFail(() => {
-      const error = new Error("User not found")
+    const project = await Project.findById(projectId).orFail(() => {
+      const error = new Error("Project not found")
       error.statusCode = ERROR_NOT_FOUND
       throw error
     })
+
+    if (
+      req.user.systemRol !== "admin" &&
+      project.ownerId.toString() !== req.user._id.toString()
+    ) {
+      return res
+        .status(ERROR_FORBIDDEN)
+        .send({ message: "You cannot update another user's project." })
+    }
+
+    project.titleProject = titleProject
+    project.descriptionProject = descriptionProject
+
+    await project.save()
 
     res.status(200).json(project)
   } catch (error) {

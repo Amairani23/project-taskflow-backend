@@ -59,7 +59,7 @@ router.patch(
   celebrate({
     body: Joi.object().keys({
       name: Joi.string().min(2).max(30),
-      systemRol: Joi.string().min(2).max(30),
+      systemRol: Joi.string(),
     }),
   }),
   patchUser,

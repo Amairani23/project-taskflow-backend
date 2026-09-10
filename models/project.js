@@ -5,12 +5,12 @@ const projectSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 2,
-    maxlength: 30,
   },
 
   descriptionProject: {
     type: String,
     required: true,
+    minlength: 2,
   },
 
   ownerId: {

@@ -3,10 +3,9 @@ import { celebrate, Joi } from "celebrate"
 
 import {
   actTaks,
-  actTaksAssigned,
   createTask,
   deleteTaks,
-  showTaks,
+  showTasks,
 } from "../controllers/taskControllers.js"
 
 const router = express.Router()
@@ -28,21 +27,22 @@ router.post(
 
 // Muestra tareas
 router.get(
-  "/tasks",
+  "/projects/:projectId/tasks",
   celebrate({
     params: Joi.object().keys({
       projectId: Joi.string().hex().length(24).required(),
     }),
   }),
-  showTaks,
+  showTasks,
 )
 
 // Elimina proyecto
 router.delete(
-  "/tasks/:tasksId",
+  "/projects/:projectId/tasks/:taskId",
   celebrate({
     params: Joi.object().keys({
       projectId: Joi.string().hex().length(24).required(),
+      taskId: Joi.string().hex().length(24).required(),
     }),
   }),
   deleteTaks,
@@ -50,25 +50,20 @@ router.delete(
 
 // Actualizar proyecto
 router.patch(
-  "/tasks/:tasksId",
+  "/projects/:projectId/tasks/:taskId",
   celebrate({
+    params: Joi.object().keys({
+      projectId: Joi.string().hex().length(24).required(),
+      taskId: Joi.string().hex().length(24).required(),
+    }),
     body: Joi.object().keys({
       title: Joi.string().min(2),
       status: Joi.string().min(2),
       prioridad: Joi.string().min(2),
+      assignedTo: Joi.string().hex().length(24).optional(),
     }),
   }),
   actTaks,
 )
 
-// Actualizar proyecto
-router.patch(
-  "/tasks/:tasksId/assigned",
-  celebrate({
-    body: Joi.object().keys({
-      assignade: Joi.string().min(2),
-    }),
-  }),
-  actTaksAssigned,
-)
 export default router

@@ -17,6 +17,7 @@ router.post(
     body: Joi.object().keys({
       titleProject: Joi.string().min(2).max(30).required(),
       descriptionProject: Joi.string().required(),
+      assignedTo: Joi.array().items(Joi.string().hex().length(24)),
     }),
   }),
   createProject,
@@ -43,6 +44,7 @@ router.patch(
     body: Joi.object().keys({
       titleProject: Joi.string().min(2),
       descriptionProject: Joi.string().min(2),
+      assignedTo: Joi.array().items(Joi.string().hex().length(24)),
     }),
   }),
   actProject,

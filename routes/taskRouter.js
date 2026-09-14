@@ -10,7 +10,7 @@ import {
 
 const router = express.Router()
 
-// Crear proyecto
+// Crear tarea
 router.post(
   "/projects/:projectId/tasks",
   celebrate({
@@ -36,7 +36,7 @@ router.get(
   showTasks,
 )
 
-// Elimina proyecto
+// Elimina tarea
 router.delete(
   "/projects/:projectId/tasks/:taskId",
   celebrate({
@@ -48,7 +48,7 @@ router.delete(
   deleteTaks,
 )
 
-// Actualizar proyecto
+// Actualizar tarea
 router.patch(
   "/projects/:projectId/tasks/:taskId",
   celebrate({

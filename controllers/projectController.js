@@ -39,7 +39,7 @@ export const createProject = async (req, res, next) => {
   }
 }
 
-export const showProject = async (req, res, next) => {
+export const showProjects = async (req, res, next) => {
   try {
     let projects
 
@@ -55,6 +55,37 @@ export const showProject = async (req, res, next) => {
     }
 
     res.status(200).json(projects)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const showProject = async (req, res, next) => {
+  try {
+    const { projectId } = req.params
+
+    let project
+
+    if (req.user.systemRol === "admin") {
+      project = await Project.findById(projectId)
+        .populate("ownerId", "name")
+        .populate("assignedTo", "name")
+    } else {
+      project = await Project.findOne({
+        _id: projectId,
+        $or: [{ ownerId: req.user._id }, { assignedTo: req.user._id }],
+      })
+        .populate("ownerId", "name")
+        .populate("assignedTo", "name")
+    }
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Proyecto no encontrado",
+      })
+    }
+
+    res.status(200).json(project)
   } catch (error) {
     next(error)
   }

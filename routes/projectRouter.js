@@ -6,6 +6,7 @@ import {
   createProject,
   deleteProject,
   showProject,
+  showProjects,
 } from "../controllers/projectController.js"
 
 const router = express.Router()
@@ -24,7 +25,10 @@ router.post(
 )
 
 // Muestra proyectos
-router.get("/projects", showProject)
+router.get("/projects", showProjects)
+
+// Muestra proyecto
+router.get("/projects/:projectId", showProject)
 
 // Elimina proyecto
 router.delete(

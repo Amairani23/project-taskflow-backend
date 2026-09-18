@@ -7,7 +7,7 @@ const ERROR_NOT_FOUND = 404
 
 export const createTask = async (req, res, next) => {
   try {
-    const { title, assignedTo } = req.body
+    const { title, status, prioridad, assignedTo } = req.body
     const { projectId } = req.params
 
     const project = await Project.findById(projectId).orFail(() => {
@@ -16,18 +16,33 @@ export const createTask = async (req, res, next) => {
       throw error
     })
 
-    if (!project.ownerId.equals(req.user._id)) {
+    const isOwner = project.ownerId.equals(req.user._id)
+
+    const isAssignedToProject = project.assignedTo.some(
+      (userId) => userId.toString() === req.user._id.toString(),
+    )
+
+    // Solo el dueño o un colaborador asignado al proyecto puede crear tareas
+    if (!isOwner && !isAssignedToProject) {
       return res.status(ERROR_FORBIDDEN).send({
         message: "You cannot create this task.",
       })
     }
 
-    if (assignedTo) {
-      const isAssignedToProject = project.assignedTo.some(
+    // Un colaborador NO puede asignar la tarea
+    if (!isOwner && assignedTo) {
+      return res.status(ERROR_FORBIDDEN).send({
+        message: "Only the project owner can assign a task.",
+      })
+    }
+
+    // Si el owner asigna la tarea, debe ser a alguien del proyecto
+    if (isOwner && assignedTo) {
+      const userIsInProject = project.assignedTo.some(
         (userId) => userId.toString() === assignedTo.toString(),
       )
 
-      if (!isAssignedToProject) {
+      if (!userIsInProject) {
         return res.status(ERROR_FORBIDDEN).send({
           message: "This user is not assigned to this project.",
         })
@@ -36,7 +51,9 @@ export const createTask = async (req, res, next) => {
 
     const newTask = new Task({
       title,
-      assignedTo,
+      status,
+      prioridad,
+      assignedTo: isOwner ? assignedTo : undefined,
       idProject: projectId,
     })
 
@@ -49,6 +66,24 @@ export const createTask = async (req, res, next) => {
 }
 
 export const showTasks = async (req, res, next) => {
+  try {
+    const tasks = await Task.find({})
+
+    const isAdmin = req.user.systemRol === "admin"
+
+    if (!isAdmin) {
+      return res.status(ERROR_FORBIDDEN).send({
+        message: "You cannot view the tasks of this project.",
+      })
+    }
+
+    res.status(200).json(tasks)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const showTask = async (req, res, next) => {
   try {
     const { projectId } = req.params
 
@@ -113,7 +148,14 @@ export const deleteTaks = async (req, res, next) => {
 
     await task.deleteOne()
 
-    res.status(200).json(task)
+    const deletedTask = await Task.findById(taskId)
+
+    console.log("Después de borrar:", deletedTask)
+
+    return res.status(200).json({
+      message: "Task deleted successfully",
+      taskId,
+    })
   } catch (error) {
     next(error)
   }
@@ -124,74 +166,102 @@ export const actTaks = async (req, res, next) => {
     const { taskId, projectId } = req.params
     const { title, status, prioridad, assignedTo } = req.body
 
+    // 1. Buscar Tarea de forma directa (Sin orFail con throw oculto)
     const task = await Task.findById(taskId)
-      .populate("idProject")
-      .orFail(() => {
-        const error = new Error("Task not found")
-        error.statusCode = ERROR_NOT_FOUND
-        throw error
-      })
+    if (!task) {
+      return res.status(404).send({ message: "Task not found" })
+    }
 
-    const project = await Project.findById(projectId).orFail(() => {
-      const error = new Error("Project not found")
-      error.statusCode = ERROR_NOT_FOUND
-      throw error
-    })
+    // 2. Buscar Proyecto de forma directa
+    const project = await Project.findById(projectId)
+    if (!project) {
+      return res.status(404).send({ message: "Project not found" })
+    }
 
-    if (task.idProject._id.toString() !== project._id.toString()) {
-      return res.status(ERROR_FORBIDDEN).send({
+    // 3. Validar pertenencia de la tarea al proyecto
+    const taskProjectId = task.idProject ? task.idProject.toString() : ""
+    if (taskProjectId !== project._id.toString()) {
+      return res.status(403).send({
         message: "This task does not belong to this project.",
       })
     }
 
-    const isAdmin = req.user.systemRol === "admin"
+    // 4. Validaciones de Seguridad (Roles)
+    const isAdmin = req.user?.systemRol === "admin"
+    const isOwner = project.ownerId?.toString() === req.user?._id?.toString()
 
-    const isOwner = project.ownerId.toString() === req.user._id.toString()
-
-    const isAssigned = task.assignedTo?.toString() === req.user._id.toString()
+    const taskAssignees = Array.isArray(task.assignedTo)
+      ? task.assignedTo
+      : [task.assignedTo]
+    const isAssigned = taskAssignees.some(
+      (id) => id?.toString() === req.user?._id?.toString(),
+    )
 
     if (!isAdmin && !isOwner && !isAssigned) {
-      return res.status(ERROR_FORBIDDEN).send({
+      return res.status(403).send({
         message: "You cannot update this task.",
       })
     }
 
-    if (title !== undefined) {
-      task.title = title
-    }
+    // 5. Actualización de campos básicos
+    if (title !== undefined) task.title = title
+    if (status !== undefined) task.status = status
+    if (prioridad !== undefined) task.prioridad = prioridad
 
-    if (status !== undefined) {
-      task.status = status
-    }
-
-    if (prioridad !== undefined) {
-      task.prioridad = prioridad
-    }
-
+    // 6. Actualización del Usuario Asignado (Manejo Ultra Seguro de IDs)
     if (assignedTo !== undefined) {
       if (!isAdmin && !isOwner) {
-        return res.status(ERROR_FORBIDDEN).send({
+        return res.status(403).send({
           message: "You cannot change the assignee.",
         })
       }
 
-      const isAssignedToProject = project.assignedTo.some(
-        (userId) => userId.toString() === assignedTo.toString(),
-      )
+      // Si desde el frontend mandan el campo vacío, null o string vacío "", desasignamos al usuario
+      if (!assignedTo || assignedTo === "" || assignedTo === "null") {
+        task.assignedTo = []
+      } else {
+        // Aseguramos que el ID que viene del frontend sea un String limpio y sin espacios
+        const frontendUserIdStr = assignedTo.toString().trim()
 
-      if (!isAssignedToProject) {
-        return res.status(ERROR_FORBIDDEN).send({
-          message: "This user is not assigned to this project.",
+        // Validamos si el usuario realmente pertenece al proyecto
+        const isAssignedToProject = project.assignedTo.some((projectUser) => {
+          if (!projectUser) return false
+
+          // Extraemos el ID sin importar si viene como un ObjectId, un String, o un Objeto poblado
+          const pId =
+            typeof projectUser === "object" && projectUser._id
+              ? projectUser._id.toString()
+              : projectUser.toString()
+
+          return pId.trim() === frontendUserIdStr
         })
-      }
 
-      task.assignedTo = assignedTo
+        // Si la validación falla, detenemos la ejecución y avisamos qué IDs fallaron
+        if (!isAssignedToProject) {
+          console.warn(
+            `Validación fallida: El usuario ${frontendUserIdStr} no pertenece al proyecto.`,
+          )
+          return res.status(403).send({
+            message: "This user is not assigned to this project.",
+          })
+        }
+
+        // Guardamos el ID dentro del arreglo de la tarea para cumplir con el esquema
+        task.assignedTo = [frontendUserIdStr]
+      }
     }
 
+    // 7. Guardar en Base de Datos
     await task.save()
 
-    res.status(200).json(task)
+    // Devolvemos la tarea actualizada con un estado de éxito
+    return res.status(200).json(task.toObject())
   } catch (error) {
-    next(error)
+    // Si hay un error, forzamos a Express a enviar una respuesta en lugar de quedarse en blanco
+    console.error("ERROR DETECTADO EN EL SERVIDOR:", error)
+    return res.status(500).send({
+      message: "Internal server error details",
+      error: error.message,
+    })
   }
 }

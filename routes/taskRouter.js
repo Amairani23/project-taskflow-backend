@@ -6,6 +6,7 @@ import {
   createTask,
   deleteTaks,
   showTasks,
+  showTask,
 } from "../controllers/taskControllers.js"
 
 const router = express.Router()
@@ -16,14 +17,16 @@ router.post(
   celebrate({
     body: Joi.object().keys({
       title: Joi.string().min(2).required(),
+      status: Joi.string().valid("pending", "progress", "completed").required(),
+      prioridad: Joi.string().valid("alta", "media", "baja").required(),
       assignedTo: Joi.string().hex().length(24).optional(),
-    }),
-    params: Joi.object().keys({
-      projectId: Joi.string().hex().length(24).required(),
     }),
   }),
   createTask,
 )
+
+// Muestra tareas
+router.get("/tasks", showTasks)
 
 // Muestra tareas
 router.get(
@@ -33,7 +36,7 @@ router.get(
       projectId: Joi.string().hex().length(24).required(),
     }),
   }),
-  showTasks,
+  showTask,
 )
 
 // Elimina tarea

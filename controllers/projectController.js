@@ -33,6 +33,11 @@ export const createProject = async (req, res, next) => {
 
     await newProject.save()
 
+    await newProject.populate([
+      { path: "ownerId", select: "name" },
+      { path: "assignedTo", select: "name" },
+    ])
+
     res.status(201).send(newProject)
   } catch (error) {
     next(error)
@@ -162,9 +167,12 @@ export const actProject = async (req, res, next) => {
     }
 
     await project.save()
+    await project.populate("ownerId", "name")
+    await project.populate("assignedTo", "name")
 
     res.status(200).json(project)
   } catch (error) {
+    console.error("ERROR ACTUALIZANDO PROJECT:", error)
     next(error)
   }
 }

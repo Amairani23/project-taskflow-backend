@@ -82,6 +82,9 @@ export const login = async (req, res, next) => {
     return res.status(200).json({
       message: "Successful login",
       token,
+      user: {
+        systemRol: user.systemRol,
+      },
     })
   } catch (error) {
     next(error)

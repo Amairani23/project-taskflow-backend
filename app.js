@@ -1,6 +1,6 @@
 import express from "express"
 import mongoose from "mongoose"
-//import cors from "cors"
+import cors from "cors"
 
 import { login, createUser } from "./controllers/usersControllers.js"
 import { errorHandler } from "./middlewares/error-handler.js"
@@ -30,11 +30,7 @@ mongoose
 
 app.use(requestLogger)
 
-// app.get('/crash-test', () => {
-//   setTimeout(() => {
-//     throw new Error('El servidor va a caer');
-//   }, 0);
-// });
+app.use(cors())
 
 app.post("/signin", login)
 app.post("/signup", createUser)

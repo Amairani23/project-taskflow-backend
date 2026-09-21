@@ -1,6 +1,5 @@
 import Task from "../models/task.js"
 import Project from "../models/project.js"
-import User from "../models/user.js"
 
 const ERROR_FORBIDDEN = 403
 const ERROR_NOT_FOUND = 404
@@ -166,19 +165,19 @@ export const actTaks = async (req, res, next) => {
     const { taskId, projectId } = req.params
     const { title, status, prioridad, assignedTo } = req.body
 
-    // 1. Buscar Tarea de forma directa (Sin orFail con throw oculto)
+    // Buscar Tarea de forma directa (Sin orFail con throw oculto)
     const task = await Task.findById(taskId)
     if (!task) {
       return res.status(404).send({ message: "Task not found" })
     }
 
-    // 2. Buscar Proyecto de forma directa
+    // Buscar Proyecto de forma directa
     const project = await Project.findById(projectId)
     if (!project) {
       return res.status(404).send({ message: "Project not found" })
     }
 
-    // 3. Validar pertenencia de la tarea al proyecto
+    //Validar pertenencia de la tarea al proyecto
     const taskProjectId = task.idProject ? task.idProject.toString() : ""
     if (taskProjectId !== project._id.toString()) {
       return res.status(403).send({
@@ -186,9 +185,11 @@ export const actTaks = async (req, res, next) => {
       })
     }
 
-    // 4. Validaciones de Seguridad (Roles)
+    //Validaciones de Seguridad (Roles)
     const isAdmin = req.user?.systemRol === "admin"
-    const isOwner = project.ownerId?.toString() === req.user?._id?.toString()
+    const projectOwnerId = project.ownerId?._id || project.ownerId
+
+    const isOwner = projectOwnerId?.toString() === req.user?._id?.toString()
 
     const taskAssignees = Array.isArray(task.assignedTo)
       ? task.assignedTo
@@ -203,55 +204,36 @@ export const actTaks = async (req, res, next) => {
       })
     }
 
-    // 5. Actualización de campos básicos
+    //Actualización de campos básicos
     if (title !== undefined) task.title = title
     if (status !== undefined) task.status = status
     if (prioridad !== undefined) task.prioridad = prioridad
 
-    // 6. Actualización del Usuario Asignado (Manejo Ultra Seguro de IDs)
-    if (assignedTo !== undefined) {
-      if (!isAdmin && !isOwner) {
-        return res.status(403).send({
-          message: "You cannot change the assignee.",
-        })
-      }
-
-      // Si desde el frontend mandan el campo vacío, null o string vacío "", desasignamos al usuario
+    // Solo admin o propietario pueden cambiar assignedTo
+    if (assignedTo !== undefined && (isAdmin || isOwner)) {
       if (!assignedTo || assignedTo === "" || assignedTo === "null") {
-        task.assignedTo = []
+        task.assignedTo = null
       } else {
-        // Aseguramos que el ID que viene del frontend sea un String limpio y sin espacios
         const frontendUserIdStr = assignedTo.toString().trim()
 
-        // Validamos si el usuario realmente pertenece al proyecto
         const isAssignedToProject = project.assignedTo.some((projectUser) => {
-          if (!projectUser) return false
+          const projectUserId =
+            projectUser?._id?.toString() || projectUser?.toString()
 
-          // Extraemos el ID sin importar si viene como un ObjectId, un String, o un Objeto poblado
-          const pId =
-            typeof projectUser === "object" && projectUser._id
-              ? projectUser._id.toString()
-              : projectUser.toString()
-
-          return pId.trim() === frontendUserIdStr
+          return projectUserId === frontendUserIdStr
         })
 
-        // Si la validación falla, detenemos la ejecución y avisamos qué IDs fallaron
         if (!isAssignedToProject) {
-          console.warn(
-            `Validación fallida: El usuario ${frontendUserIdStr} no pertenece al proyecto.`,
-          )
           return res.status(403).send({
             message: "This user is not assigned to this project.",
           })
         }
 
-        // Guardamos el ID dentro del arreglo de la tarea para cumplir con el esquema
-        task.assignedTo = [frontendUserIdStr]
+        task.assignedTo = frontendUserIdStr
       }
     }
 
-    // 7. Guardar en Base de Datos
+    // Guardar en Base de Datos
     await task.save()
 
     // Devolvemos la tarea actualizada con un estado de éxito

@@ -1,5 +1,6 @@
 import Project from "../models/project.js"
 import User from "../models/user.js"
+import Task from "../models/task.js"
 
 const ERROR_FORBIDDEN = 403
 const ERROR_NOT_FOUND = 404
@@ -46,18 +47,63 @@ export const createProject = async (req, res, next) => {
 
 export const showProjects = async (req, res, next) => {
   try {
-    let projects
+    const match =
+      req.user.systemRol === "admin"
+        ? {}
+        : {
+            $or: [{ ownerId: req.user._id }, { assignedTo: req.user._id }],
+          }
 
-    if (req.user.systemRol === "admin") {
-      projects = await Project.find({})
-        .populate("ownerId", "name")
-        .populate("assignedTo", "name")
-    } else {
-      projects = await Project.find({
-        //donde es el propietario O esta asignado.
-        $or: [{ ownerId: req.user._id }, { assignedTo: req.user._id }],
-      })
-    }
+    const projects = await Project.aggregate([
+      {
+        $match: match,
+      },
+
+      // Buscar usuarios asignados al proyecto
+      {
+        $lookup: {
+          from: "users",
+          localField: "assignedTo",
+          foreignField: "_id",
+          as: "assignedTo",
+        },
+      },
+
+      // Buscar tareas
+      {
+        $lookup: {
+          from: "tasks",
+          localField: "_id",
+          foreignField: "idProject",
+          as: "tasks",
+        },
+      },
+
+      {
+        $addFields: {
+          totalTasks: {
+            $size: "$tasks",
+          },
+
+          pendingTasks: {
+            $size: {
+              $filter: {
+                input: "$tasks",
+                as: "task",
+                cond: {
+                  $in: ["$$task.status", ["pending", "progress"]],
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          tasks: 0,
+        },
+      },
+    ])
 
     res.status(200).json(projects)
   } catch (error) {
@@ -69,28 +115,57 @@ export const showProject = async (req, res, next) => {
   try {
     const { projectId } = req.params
 
-    let project
+    const match =
+      req.user.systemRol === "admin"
+        ? { _id: new mongoose.Types.ObjectId(projectId) }
+        : {
+            _id: new mongoose.Types.ObjectId(projectId),
+            $or: [{ ownerId: req.user._id }, { assignedTo: req.user._id }],
+          }
 
-    if (req.user.systemRol === "admin") {
-      project = await Project.findById(projectId)
-        .populate("ownerId", "name")
-        .populate("assignedTo", "name")
-    } else {
-      project = await Project.findOne({
-        _id: projectId,
-        $or: [{ ownerId: req.user._id }, { assignedTo: req.user._id }],
-      })
-        .populate("ownerId", "name")
-        .populate("assignedTo", "name")
-    }
+    const projects = await Project.aggregate([
+      {
+        $match: match,
+      },
+      {
+        $lookup: {
+          from: "tasks",
+          localField: "_id",
+          foreignField: "idProject",
+          as: "tasks",
+        },
+      },
+      {
+        $addFields: {
+          totalTasks: { $size: "$tasks" },
 
-    if (!project) {
+          pendingTasks: {
+            $size: {
+              $filter: {
+                input: "$tasks",
+                as: "task",
+                cond: {
+                  $in: ["$$task.status", ["pending", "progress"]],
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          tasks: 0,
+        },
+      },
+    ])
+
+    if (!projects.length) {
       return res.status(404).json({
         message: "Proyecto no encontrado",
       })
     }
 
-    res.status(200).json(project)
+    res.status(200).json(projects[0])
   } catch (error) {
     next(error)
   }
@@ -100,27 +175,45 @@ export const deleteProject = async (req, res, next) => {
   try {
     const { projectId } = req.params
 
-    //primero buscar la tarjeta, comparar el owner con el usuario autenticado
-    const project = await Project.findById(projectId).orFail(() => {
-      const error = new Error("Project not found")
-      error.statusCode = ERROR_NOT_FOUND
-      throw error
-    })
+    const project = await Project.findById(projectId)
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+      })
+    }
 
     const isAdmin = req.user.systemRol === "admin"
+
     const isOwner = project.ownerId.toString() === req.user._id.toString()
 
     if (!isAdmin && !isOwner) {
-      return res.status(403).send({
+      return res.status(403).json({
         message: "You cannot delete this project.",
       })
     }
 
-    await project.deleteOne()
+    // Eliminar todas las tareas de este proyecto
+    const deletedTasks = await Task.deleteMany({
+      idProject: projectId,
+    })
 
-    res.status(200).json(project)
+    // Eliminar el proyecto
+    await Project.findByIdAndDelete(projectId)
+
+    console.log("PROJECT DELETED:", projectId)
+
+    return res.status(200).json({
+      message: "Project deleted successfully",
+      projectId,
+      deletedTasks: deletedTasks.deletedCount,
+    })
   } catch (error) {
-    next(error)
+    console.error("🔥 ERROR REAL AL ELIMINAR PROYECTO:", error)
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }
 

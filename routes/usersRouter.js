@@ -5,12 +5,11 @@ import validator from "validator"
 import {
   getUser,
   getUserId,
-  patchUser,
-  patchUserAvatar,
+  updateUser,
   createUser,
   getCurrentUser,
-  updateRol,
-  updateRolDos
+  updateRolDos,
+  deleteUserId,
 } from "../controllers/usersControllers.js"
 
 const router = express.Router()
@@ -41,7 +40,7 @@ router.post(
 //Mostrar usuarios
 router.get("/users", getUser)
 
-//Mostrar usuarios
+//Mostrar usuario
 router.get("/users/me", getCurrentUser)
 
 // Mostrar usuario por ID
@@ -60,14 +59,14 @@ router.patch(
   "/users/me",
   celebrate({
     body: Joi.object().keys({
-      name: Joi.string().min(2).max(30),
-      systemRol: Joi.string(),
+      name: Joi.string().min(2).max(30).required(),
+      avatar: Joi.string().custom(validateURL),
     }),
   }),
-  patchUser,
+  updateUser,
 )
 
-// Actualizar avatar
+// Actualizar rol
 router.patch(
   "/users/:userId",
   celebrate({
@@ -78,15 +77,14 @@ router.patch(
   updateRolDos,
 )
 
-// Actualizar avatar
-router.patch(
-  "/users/me/avatar",
+router.delete(
+  "/users/:userId",
   celebrate({
-    body: Joi.object().keys({
-      avatar: Joi.string().custom(validateURL).required(),
+    params: Joi.object().keys({
+      userId: Joi.string().hex().length(24).required(),
     }),
   }),
-  patchUserAvatar,
+  deleteUserId,
 )
 
 export default router

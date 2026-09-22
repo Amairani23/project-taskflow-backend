@@ -119,6 +119,24 @@ export const getUserId = async (req, res, next) => {
   }
 }
 
+export const deleteUserId = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+
+    const user = await User.findByIdAndDelete(userId)
+
+    if (!user) {
+      const error = new Error("User not found")
+      error.statusCode = ERROR_NOT_FOUND
+      throw error
+    }
+
+    res.status(200).json(user)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const getCurrentUser = async (req, res, next) => {
   try {
     const id = req.user._id
@@ -135,40 +153,18 @@ export const getCurrentUser = async (req, res, next) => {
   }
 }
 
-export const patchUser = async (req, res, next) => {
+export const updateUser = async (req, res, next) => {
   try {
-    const { name, systemRol } = req.body
+    const { name, avatar } = req.body
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { name, systemRol },
+      { name, avatar },
       { new: true, runValidators: true },
     ).orFail(() => {
       const error = new Error("User not found")
       error.statusCode = ERROR_NOT_FOUND
       throw error
-    })
-
-    res.status(200).json(user)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const updateRol = async (req, res, next) => {
-  try {
-    const { systemRol } = req.body
-    const { userId } = req.params
-    
-
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { systemRol },
-      { new: true, runValidators: true },
-    ).orFail(() => {
-      const error = new Error("User not found")
-      error.statusCode = ERROR_NOT_FOUND
-      return error
     })
 
     res.status(200).json(user)
@@ -191,20 +187,14 @@ export const updateRolDos = async (req, res, next) => {
     }
 
     if (systemRol === "admin") {
-      console.log("USUARIO QUE QUIERO HACER ADMIN:", userId)
-
+      //Verificar si hay proyectos encontrados por el usuario o asignados
       const haveProject = await Project.exists({
-        $or: [
-          { ownerId: userId },
-          { assignedTo: userId },
-        ],
+        $or: [{ ownerId: userId }, { assignedTo: userId }],
       })
-
-      console.log("PROYECTOS ENCONTRADOS:", haveProject)
 
       if (haveProject) {
         const error = new Error(
-          "El usuario no puede ser admin porque tiene proyectos propios o está asignado a un proyecto."
+          "El usuario no puede ser admin porque tiene proyectos propios o está asignado a un proyecto.",
         )
         error.statusCode = 400
         throw error
@@ -214,28 +204,6 @@ export const updateRolDos = async (req, res, next) => {
     user.systemRol = systemRol
 
     await user.save()
-
-    res.status(200).json(user)
-  } catch (error) {
-    next(error)
-  }
-}
-
-
-
-export const patchUserAvatar = async (req, res, next) => {
-  try {
-    const { avatar } = req.body
-
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { avatar },
-      { new: true, runValidators: true },
-    ).orFail(() => {
-      const error = new Error("User not found")
-      error.statusCode = ERROR_NOT_FOUND
-      throw error
-    })
 
     res.status(200).json(user)
   } catch (error) {

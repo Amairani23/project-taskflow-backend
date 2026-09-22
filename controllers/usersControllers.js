@@ -1,4 +1,6 @@
 import User from "../models/user.js"
+import Project from "../models/project.js"
+import Task from "../models/task.js"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 
@@ -152,6 +154,74 @@ export const patchUser = async (req, res, next) => {
     next(error)
   }
 }
+
+export const updateRol = async (req, res, next) => {
+  try {
+    const { systemRol } = req.body
+    const { userId } = req.params
+    
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { systemRol },
+      { new: true, runValidators: true },
+    ).orFail(() => {
+      const error = new Error("User not found")
+      error.statusCode = ERROR_NOT_FOUND
+      return error
+    })
+
+    res.status(200).json(user)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateRolDos = async (req, res, next) => {
+  try {
+    const { systemRol } = req.body
+    const { userId } = req.params
+
+    const user = await User.findById(userId)
+
+    if (!user) {
+      const error = new Error("User not found")
+      error.statusCode = ERROR_NOT_FOUND
+      throw error
+    }
+
+    if (systemRol === "admin") {
+      console.log("USUARIO QUE QUIERO HACER ADMIN:", userId)
+
+      const haveProject = await Project.exists({
+        $or: [
+          { ownerId: userId },
+          { assignedTo: userId },
+        ],
+      })
+
+      console.log("PROYECTOS ENCONTRADOS:", haveProject)
+
+      if (haveProject) {
+        const error = new Error(
+          "El usuario no puede ser admin porque tiene proyectos propios o está asignado a un proyecto."
+        )
+        error.statusCode = 400
+        throw error
+      }
+    }
+
+    user.systemRol = systemRol
+
+    await user.save()
+
+    res.status(200).json(user)
+  } catch (error) {
+    next(error)
+  }
+}
+
+
 
 export const patchUserAvatar = async (req, res, next) => {
   try {

@@ -201,7 +201,6 @@ export const deleteProject = async (req, res, next) => {
     // Eliminar el proyecto
     await Project.findByIdAndDelete(projectId)
 
-    console.log("PROJECT DELETED:", projectId)
 
     return res.status(200).json({
       message: "Project deleted successfully",
@@ -209,7 +208,6 @@ export const deleteProject = async (req, res, next) => {
       deletedTasks: deletedTasks.deletedCount,
     })
   } catch (error) {
-    console.error("🔥 ERROR REAL AL ELIMINAR PROYECTO:", error)
 
     return res.status(500).json({
       message: error.message,

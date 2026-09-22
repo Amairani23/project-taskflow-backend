@@ -9,6 +9,8 @@ import {
   patchUserAvatar,
   createUser,
   getCurrentUser,
+  updateRol,
+  updateRolDos
 } from "../controllers/usersControllers.js"
 
 const router = express.Router()
@@ -63,6 +65,17 @@ router.patch(
     }),
   }),
   patchUser,
+)
+
+// Actualizar avatar
+router.patch(
+  "/users/:userId",
+  celebrate({
+    params: Joi.object().keys({
+      userId: Joi.string().hex().length(24).required(),
+    }),
+  }),
+  updateRolDos,
 )
 
 // Actualizar avatar

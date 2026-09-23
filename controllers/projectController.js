@@ -160,7 +160,7 @@ export const showProject = async (req, res, next) => {
     ])
 
     if (!projects.length) {
-      return res.status(404).json({
+      return res.status(ERROR_NOT_FOUND).json({
         message: "Proyecto no encontrado",
       })
     }
@@ -178,7 +178,7 @@ export const deleteProject = async (req, res, next) => {
     const project = await Project.findById(projectId)
 
     if (!project) {
-      return res.status(404).json({
+      return res.status(ERROR_NOT_FOUND).json({
         message: "Project not found",
       })
     }
@@ -188,7 +188,7 @@ export const deleteProject = async (req, res, next) => {
     const isOwner = project.ownerId.toString() === req.user._id.toString()
 
     if (!isAdmin && !isOwner) {
-      return res.status(403).json({
+      return res.status(ERROR_FORBIDDEN).json({
         message: "You cannot delete this project.",
       })
     }
@@ -233,7 +233,7 @@ export const actProject = async (req, res, next) => {
     )
 
     if (!isAdmin && !isOwner && !isAssigned) {
-      return res.status(403).send({
+      return res.status(ERROR_FORBIDDEN).send({
         message: "You cannot edit this project.",
       })
     }

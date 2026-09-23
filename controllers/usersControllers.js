@@ -123,7 +123,7 @@ export const deleteUserId = async (req, res, next) => {
   try {
     const { userId } = req.params
 
-    const user = await User.findByIdAndDelete(userId)
+    const user = await User.findById(userId)
 
     if (!user) {
       const error = new Error("User not found")
@@ -131,11 +131,36 @@ export const deleteUserId = async (req, res, next) => {
       throw error
     }
 
-    res.status(200).json(user)
+    // Buscar los proyectos del usuario
+    const projects = await Project.find({
+      ownerId: userId,
+    })
+
+    const projectIds = projects.map((project) => project._id)
+
+    // Eliminar todas las tareas de esos proyectos
+    const deletedTasks = await Task.deleteMany({
+      idProject: projectIds ,
+    })
+
+    // Eliminar los proyectos
+    const deletedProjects = await Project.deleteMany({
+      ownerId: userId,
+    })
+
+    // Eliminar el usuario
+    await User.findByIdAndDelete(userId)
+
+    res.status(200).json({
+      user,
+      deletedProjects: deletedProjects.deletedCount,
+      deletedTasks: deletedTasks.deletedCount,
+    })
   } catch (error) {
     next(error)
   }
 }
+
 
 export const getCurrentUser = async (req, res, next) => {
   try {
@@ -196,7 +221,7 @@ export const updateRolDos = async (req, res, next) => {
         const error = new Error(
           "El usuario no puede ser admin porque tiene proyectos propios o está asignado a un proyecto.",
         )
-        error.statusCode = 400
+        error.statusCode = ERROR_BAD_REQUEST
         throw error
       }
     }

@@ -6,6 +6,9 @@ La aplicación permite crear y administrar proyectos y tareas, asignar usuarios 
 
 El sistema cuenta con autenticación mediante JWT y autorización basada en roles y relaciones entre usuarios, proyectos y tareas.
 
+REST API: https://api.inariama.taskflow.mooo.com/
+Proyecto: https://inariama.taskflow.mooo.com/
+
 ## Tecnologías
 
 - Node.js

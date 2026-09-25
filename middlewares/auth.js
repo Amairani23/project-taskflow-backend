@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken"
 import User from "../models/user.js"
 
-export const auth = async (req, res, next) => {
+const auth = async (req, res, next) => {
   const { authorization } = req.headers
 
   if (!authorization || !authorization.startsWith("Bearer ")) {
@@ -22,10 +22,10 @@ export const auth = async (req, res, next) => {
 
     req.user = user
 
-    next()
+    return next()
   } catch (error) {
-    return res.status(401).send({
-      message: "Authorization is required.",
-    })
+    return next(error)
   }
 }
+
+export default auth

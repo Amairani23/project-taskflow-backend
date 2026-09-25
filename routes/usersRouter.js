@@ -1,5 +1,5 @@
 import express from "express"
-import { celebrate, Joi, Segments } from "celebrate"
+import { celebrate, Joi } from "celebrate"
 import validator from "validator"
 
 import {
@@ -11,6 +11,7 @@ import {
   updateRolDos,
   deleteUserId,
 } from "../controllers/usersControllers.js"
+import validarUsuario from "../middlewares/validation.js"
 
 const router = express.Router()
 
@@ -23,24 +24,12 @@ const validateURL = (value, helpers) => {
 }
 
 // Crear usuario
-router.post(
-  "/users",
-  celebrate({
-    body: Joi.object().keys({
-      name: Joi.string().min(2).max(30),
-      systemRol: Joi.string().min(2).max(30),
-      avatar: Joi.string().custom(validateURL),
-      email: Joi.string().email().required(),
-      password: Joi.string().required(),
-    }),
-  }),
-  createUser,
-)
+router.post("/users", validarUsuario, createUser)
 
-//Mostrar usuarios
+// Mostrar usuarios
 router.get("/users", getUser)
 
-//Mostrar usuario
+// Mostrar usuario
 router.get("/users/me", getCurrentUser)
 
 // Mostrar usuario por ID

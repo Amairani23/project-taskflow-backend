@@ -5,7 +5,9 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "lint": "npx eslint ."
   },
   "repository": {
     "type": "git",
@@ -23,11 +25,17 @@
     "celebrate": "^16.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.32.0",
     "express": "^5.2.1",
     "express-winston": "^4.2.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.5",
     "validator": "^13.15.35",
     "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "nodemon": "^3.1.14"
   }
 }

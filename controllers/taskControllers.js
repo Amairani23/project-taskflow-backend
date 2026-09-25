@@ -4,7 +4,7 @@ import Project from "../models/project.js"
 const ERROR_FORBIDDEN = 403
 const ERROR_NOT_FOUND = 404
 
-export const createTask = async (req, res, next) => {
+const createTask = async (req, res, next) => {
   try {
     const { title, status, prioridad, assignedTo } = req.body
     const { projectId } = req.params
@@ -58,13 +58,13 @@ export const createTask = async (req, res, next) => {
 
     await newTask.save()
 
-    res.status(201).send(newTask)
+    return res.status(201).send(newTask)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const showTasks = async (req, res, next) => {
+const showTasks = async (req, res, next) => {
   try {
     const tasks = await Task.find({})
 
@@ -76,13 +76,13 @@ export const showTasks = async (req, res, next) => {
       })
     }
 
-    res.status(200).json(tasks)
+    return res.status(200).json(tasks)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const showTask = async (req, res, next) => {
+const showTask = async (req, res, next) => {
   try {
     const { projectId } = req.params
 
@@ -110,13 +110,13 @@ export const showTask = async (req, res, next) => {
       idProject: projectId,
     }).populate("assignedTo", "name")
 
-    res.status(200).json(tasks)
+    return res.status(200).json(tasks)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const deleteTaks = async (req, res, next) => {
+const deleteTaks = async (req, res, next) => {
   try {
     const { taskId, projectId } = req.params
 
@@ -137,7 +137,7 @@ export const deleteTaks = async (req, res, next) => {
     const isAdmin = req.user.systemRol === "admin"
     const isOwner =
       task.idProject.ownerId.toString() === req.user._id.toString()
-    const isAssigned = task.assignedTo?.toString() === req.user._id.toString()
+    const isAssigned = task.assignedTo.toString() === req.user._id.toString()
 
     if (!isAdmin && !isOwner && !isAssigned) {
       return res.status(ERROR_FORBIDDEN).send({
@@ -147,20 +147,18 @@ export const deleteTaks = async (req, res, next) => {
 
     await task.deleteOne()
 
-    const deletedTask = await Task.findById(taskId)
-
-    console.log("Después de borrar:", deletedTask)
+    await Task.findById(taskId)
 
     return res.status(200).json({
       message: "Task deleted successfully",
       taskId,
     })
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const actTaks = async (req, res, next) => {
+const actTaks = async (req, res, next) => {
   try {
     const { taskId, projectId } = req.params
     const { title, status, prioridad, assignedTo } = req.body
@@ -177,7 +175,7 @@ export const actTaks = async (req, res, next) => {
       return res.status(404).send({ message: "Project not found" })
     }
 
-    //Validar pertenencia de la tarea al proyecto
+    // Validar pertenencia de la tarea al proyecto
     const taskProjectId = task.idProject ? task.idProject.toString() : ""
     if (taskProjectId !== project._id.toString()) {
       return res.status(403).send({
@@ -185,17 +183,17 @@ export const actTaks = async (req, res, next) => {
       })
     }
 
-    //Validaciones de Seguridad (Roles)
-    const isAdmin = req.user?.systemRol === "admin"
-    const projectOwnerId = project.ownerId?._id || project.ownerId
+    // Validaciones de Seguridad (Roles)
+    const isAdmin = req.user.systemRol === "admin"
+    const projectOwnerId = project.ownerId._id || project.ownerId
 
-    const isOwner = projectOwnerId?.toString() === req.user?._id?.toString()
+    const isOwner = projectOwnerId.toString() === req.user._id.toString()
 
     const taskAssignees = Array.isArray(task.assignedTo)
       ? task.assignedTo
       : [task.assignedTo]
     const isAssigned = taskAssignees.some(
-      (id) => id?.toString() === req.user?._id?.toString(),
+      (id) => id.toString() === req.user._id.toString(),
     )
 
     if (!isAdmin && !isOwner && !isAssigned) {
@@ -204,7 +202,7 @@ export const actTaks = async (req, res, next) => {
       })
     }
 
-    //Actualización de campos básicos
+    // Actualización de campos básicos
     if (title !== undefined) task.title = title
     if (status !== undefined) task.status = status
     if (prioridad !== undefined) task.prioridad = prioridad
@@ -218,7 +216,7 @@ export const actTaks = async (req, res, next) => {
 
         const isAssignedToProject = project.assignedTo.some((projectUser) => {
           const projectUserId =
-            projectUser?._id?.toString() || projectUser?.toString()
+            projectUser._id.toString() || projectUser.toString()
 
           return projectUserId === frontendUserIdStr
         })
@@ -239,11 +237,8 @@ export const actTaks = async (req, res, next) => {
     // Devolvemos la tarea actualizada con un estado de éxito
     return res.status(200).json(task.toObject())
   } catch (error) {
-    // Si hay un error, forzamos a Express a enviar una respuesta en lugar de quedarse en blanco
-    console.error("ERROR DETECTADO EN EL SERVIDOR:", error)
-    return res.status(500).send({
-      message: "Internal server error details",
-      error: error.message,
-    })
+    return next(error)
   }
 }
+
+export { createTask, showTasks, showTask, deleteTaks, actTaks }

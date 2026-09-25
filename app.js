@@ -2,13 +2,12 @@ import express from "express"
 import mongoose from "mongoose"
 import cors from "cors"
 
-import { login, createUser } from "./controllers/usersControllers.js"
-import { errorHandler } from "./middlewares/error-handler.js"
-import { auth } from "./middlewares/auth.js"
+import { createUser, login } from "./controllers/usersControllers.js"
+import errorHandler from "./middlewares/error-handler.js"
+import auth from "./middlewares/auth.js"
 import { requestLogger, errorLogger } from "./middlewares/logger.js"
-import usersRouter from "./routes/usersRouter.js"
-import projectRouter from "./routes/projectRouter.js"
-import taskRouter from "./routes/taskRouter.js"
+import routes from "./routes/index.js"
+import validarUsuario from "./middlewares/validation.js"
 
 import "dotenv/config"
 
@@ -19,7 +18,7 @@ app.use(express.json())
 
 // Conectar con MongoDB
 mongoose
-  .connect("mongodb://localhost:27017/taskflow")
+  .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("Conectado a MongoDB")
   })
@@ -33,13 +32,11 @@ app.use(requestLogger)
 app.use(cors())
 
 app.post("/signin", login)
-app.post("/signup", createUser)
+app.post("/signup", validarUsuario, createUser)
 
 app.use(auth)
 
-app.use("/", usersRouter)
-app.use("/", projectRouter)
-app.use("/", taskRouter)
+app.use("/", routes)
 
 app.use(errorLogger)
 app.use(errorHandler)

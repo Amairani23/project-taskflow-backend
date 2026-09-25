@@ -1,15 +1,16 @@
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
 import User from "../models/user.js"
 import Project from "../models/project.js"
 import Task from "../models/task.js"
-import bcrypt from "bcrypt"
-import jwt from "jsonwebtoken"
 
 const ERROR_BAD_REQUEST = 400
 const ERROR_UNAUTHORIZED = 401
+const ERROR_FORBIDDEN = 403
 const ERROR_NOT_FOUND = 404
 const ERROR_CONFLICT = 409
 
-export const createUser = async (req, res, next) => {
+const createUser = async (req, res, next) => {
   try {
     const { name, systemRol, avatar, email, password } = req.body
 
@@ -41,13 +42,19 @@ export const createUser = async (req, res, next) => {
 
     await newUser.save()
 
-    res.status(201).send(newUser)
+    return res.status(201).send({
+      _id: newUser._id,
+      name: newUser.name,
+      systemRol: newUser.systemRol,
+      avatar: newUser.avatar,
+      email: newUser.email,
+    })
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const login = async (req, res, next) => {
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body
 
@@ -89,21 +96,21 @@ export const login = async (req, res, next) => {
       },
     })
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const getUser = async (req, res, next) => {
+const getUser = async (req, res, next) => {
   try {
     const users = await User.find({})
 
-    res.status(200).json(users)
+    return res.status(200).json(users)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const getUserId = async (req, res, next) => {
+const getUserId = async (req, res, next) => {
   try {
     const { userId } = req.params
 
@@ -113,15 +120,23 @@ export const getUserId = async (req, res, next) => {
       throw error
     })
 
-    res.status(200).json(user)
+    return res.status(200).json(user)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const deleteUserId = async (req, res, next) => {
+const deleteUserId = async (req, res, next) => {
   try {
     const { userId } = req.params
+
+    const isAdmin = req.user.systemRol === "admin"
+
+    if (!isAdmin) {
+      return res.status(ERROR_FORBIDDEN).json({
+        message: "Only administrators can delete users.",
+      })
+    }
 
     const user = await User.findById(userId)
 
@@ -140,7 +155,7 @@ export const deleteUserId = async (req, res, next) => {
 
     // Eliminar todas las tareas de esos proyectos
     const deletedTasks = await Task.deleteMany({
-      idProject: projectIds ,
+      idProject: projectIds,
     })
 
     // Eliminar los proyectos
@@ -151,18 +166,17 @@ export const deleteUserId = async (req, res, next) => {
     // Eliminar el usuario
     await User.findByIdAndDelete(userId)
 
-    res.status(200).json({
+    return res.status(200).json({
       user,
       deletedProjects: deletedProjects.deletedCount,
       deletedTasks: deletedTasks.deletedCount,
     })
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-
-export const getCurrentUser = async (req, res, next) => {
+const getCurrentUser = async (req, res, next) => {
   try {
     const id = req.user._id
 
@@ -172,13 +186,13 @@ export const getCurrentUser = async (req, res, next) => {
       throw error
     })
 
-    res.status(200).json(user)
+    return res.status(200).json(user)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const updateUser = async (req, res, next) => {
+const updateUser = async (req, res, next) => {
   try {
     const { name, avatar } = req.body
 
@@ -192,16 +206,24 @@ export const updateUser = async (req, res, next) => {
       throw error
     })
 
-    res.status(200).json(user)
+    return res.status(200).json(user)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const updateRolDos = async (req, res, next) => {
+const updateRolDos = async (req, res, next) => {
   try {
     const { systemRol } = req.body
     const { userId } = req.params
+
+    const isAdmin = req.user.systemRol === "admin"
+
+    if (!isAdmin) {
+      return res.status(ERROR_FORBIDDEN).json({
+        message: "Only administrators can change user roles.",
+      })
+    }
 
     const user = await User.findById(userId)
 
@@ -211,27 +233,36 @@ export const updateRolDos = async (req, res, next) => {
       throw error
     }
 
-    if (systemRol === "admin") {
-      //Verificar si hay proyectos encontrados por el usuario o asignados
-      const haveProject = await Project.exists({
-        $or: [{ ownerId: userId }, { assignedTo: userId }],
-      })
+    // Verificar si hay proyectos encontrados por el usuario o asignados
+    const haveProject = await Project.exists({
+      $or: [{ ownerId: userId }, { assignedTo: userId }],
+    })
 
-      if (haveProject) {
-        const error = new Error(
-          "El usuario no puede ser admin porque tiene proyectos propios o está asignado a un proyecto.",
-        )
-        error.statusCode = ERROR_BAD_REQUEST
-        throw error
-      }
+    if (haveProject) {
+      const error = new Error(
+        "El usuario no puede ser admin porque tiene proyectos propios o está asignado a un proyecto.",
+      )
+      error.statusCode = ERROR_BAD_REQUEST
+      throw error
     }
 
     user.systemRol = systemRol
 
     await user.save()
 
-    res.status(200).json(user)
+    return res.status(200).json(user)
   } catch (error) {
-    next(error)
+    return next(error)
   }
+}
+
+export {
+  createUser,
+  login,
+  getUser,
+  getUserId,
+  deleteUserId,
+  getCurrentUser,
+  updateUser,
+  updateRolDos,
 }

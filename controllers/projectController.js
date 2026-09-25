@@ -1,3 +1,4 @@
+import mongoose from "mongoose"
 import Project from "../models/project.js"
 import User from "../models/user.js"
 import Task from "../models/task.js"
@@ -5,11 +6,11 @@ import Task from "../models/task.js"
 const ERROR_FORBIDDEN = 403
 const ERROR_NOT_FOUND = 404
 
-export const createProject = async (req, res, next) => {
+const createProject = async (req, res, next) => {
   try {
-    const { titleProject, descriptionProject, assignedTo } = req.body
+    const { titleProject, descriptionProject, assignedTo = [] } = req.body
 
-    if (assignedTo?.length > 0 && req.user.systemRol !== "admin") {
+    if (assignedTo.length > 0 && req.user.systemRol !== "admin") {
       return res.status(ERROR_FORBIDDEN).send({
         message: "Only administrators can assign projects.",
       })
@@ -28,7 +29,7 @@ export const createProject = async (req, res, next) => {
     const newProject = new Project({
       titleProject,
       descriptionProject,
-      assignedTo: assignedTo || [],
+      assignedTo: assignedTo,
       ownerId: req.user._id,
     })
 
@@ -39,13 +40,13 @@ export const createProject = async (req, res, next) => {
       { path: "assignedTo", select: "name" },
     ])
 
-    res.status(201).send(newProject)
+    return res.status(201).send(newProject)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const showProjects = async (req, res, next) => {
+const showProjects = async (req, res, next) => {
   try {
     const match =
       req.user.systemRol === "admin"
@@ -105,13 +106,13 @@ export const showProjects = async (req, res, next) => {
       },
     ])
 
-    res.status(200).json(projects)
+    return res.status(200).json(projects)
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const showProject = async (req, res, next) => {
+const showProject = async (req, res, next) => {
   try {
     const { projectId } = req.params
 
@@ -165,13 +166,13 @@ export const showProject = async (req, res, next) => {
       })
     }
 
-    res.status(200).json(projects[0])
+    return res.status(200).json(projects[0])
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
-export const deleteProject = async (req, res, next) => {
+const deleteProject = async (req, res, next) => {
   try {
     const { projectId } = req.params
 
@@ -201,21 +202,17 @@ export const deleteProject = async (req, res, next) => {
     // Eliminar el proyecto
     await Project.findByIdAndDelete(projectId)
 
-
     return res.status(200).json({
       message: "Project deleted successfully",
       projectId,
       deletedTasks: deletedTasks.deletedCount,
     })
   } catch (error) {
-
-    return res.status(500).json({
-      message: error.message,
-    })
+    return next(error)
   }
 }
 
-export const actProject = async (req, res, next) => {
+const actProject = async (req, res, next) => {
   try {
     const { projectId } = req.params
     const { titleProject, descriptionProject, assignedTo } = req.body
@@ -261,9 +258,10 @@ export const actProject = async (req, res, next) => {
     await project.populate("ownerId", "name")
     await project.populate("assignedTo", "name")
 
-    res.status(200).json(project)
+    return res.status(200).json(project)
   } catch (error) {
-    console.error("ERROR ACTUALIZANDO PROJECT:", error)
-    next(error)
+    return next(error)
   }
 }
+
+export { createProject, showProjects, showProject, deleteProject, actProject }

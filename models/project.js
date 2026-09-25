@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose from 'mongoose';
 
 const projectSchema = new mongoose.Schema({
   titleProject: {
@@ -15,7 +15,7 @@ const projectSchema = new mongoose.Schema({
 
   ownerId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
 
@@ -23,7 +23,7 @@ const projectSchema = new mongoose.Schema({
     type: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        ref: 'User',
       },
     ],
     default: [],
@@ -33,7 +33,7 @@ const projectSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-})
+});
 
-const Project = mongoose.model("Project", projectSchema)
-export default Project
+const Project = mongoose.model('Project', projectSchema);
+export default Project;

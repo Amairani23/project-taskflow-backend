@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose from 'mongoose';
 
 const taskSchema = new mongoose.Schema({
   title: {
@@ -9,33 +9,33 @@ const taskSchema = new mongoose.Schema({
 
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     default: null,
   },
 
   idProject: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Project",
+    ref: 'Project',
     required: true,
   },
 
   status: {
     type: String,
     required: true,
-    default: "pending",
+    default: 'pending',
   },
 
   prioridad: {
     type: String,
     required: true,
-    default: "alta",
+    default: 'alta',
   },
 
   createdAt: {
     type: Date,
     default: Date.now,
   },
-})
+});
 
-const Task = mongoose.model("Task", taskSchema)
-export default Task
+const Task = mongoose.model('Task', taskSchema);
+export default Task;

@@ -2,11 +2,11 @@ import express from "express"
 import { celebrate, Joi } from "celebrate"
 
 import {
-  actProject,
   createProject,
-  deleteProject,
   showProject,
   showProjects,
+  actProject,
+  deleteProject,
 } from "../controllers/projectController.js"
 
 const router = express.Router()

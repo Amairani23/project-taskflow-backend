@@ -22,9 +22,10 @@ const userSchema = new mongoose.Schema({
       "https://practicum-content.s3.us-west-1.amazonaws.com/resources/moved_avatar_1604080799.jpg",
     validate: {
       validator: (url) =>
-        /^https?:\/\/(?:www\.)?[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+$/.test(
+        /^https?:\/\/(?:www\.)?[a-zA-Z0-9\-._~:/?#\x5B\x5D@!$&'()*+,;=%]+$/.test(
           url,
         ),
+
       message: "URL inválida",
     },
   },
@@ -42,7 +43,6 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
-    select: false,
   },
 })
 

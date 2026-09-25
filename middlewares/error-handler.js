@@ -3,8 +3,8 @@ const ERROR_UNAUTHORIZED = 401;
 const ERROR_NOT_FOUND = 404;
 const ERROR_SERVER = 500;
 
-export const errorHandler = (err, req, res, next) => {
-  if (err.name === "ValidationError" || err.name === "CastError") {
+const errorHandler = (err, req, res, next) => {
+  if (err.name === 'ValidationError' || err.name === 'CastError') {
     return res.status(ERROR_BAD_REQUEST).send({
       message: 'Bad Request',
     });
@@ -23,6 +23,8 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   return res.status(ERROR_SERVER).send({
-    message: "An error has occurred on the server",
+    message: 'An error has occurred on the server',
   });
 };
+
+export default errorHandler;

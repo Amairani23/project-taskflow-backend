@@ -12,7 +12,7 @@ const ERROR_CONFLICT = 409
 
 const createUser = async (req, res, next) => {
   try {
-    const { name, systemRol, avatar, email, password } = req.body
+    const { name, avatar, email, password } = req.body
 
     if (!email || !password) {
       return res
@@ -30,11 +30,17 @@ const createUser = async (req, res, next) => {
         .send({ message: "The email address is already registered." })
     }
 
+    // El primer usuario será admin.
+    // Los siguientes serán colaboradores.
+    const userCount = await User.countDocuments()
+
+    const role = userCount === 0 ? "admin" : "colaborador"
+
     const hashPassword = await bcrypt.hash(password, 10)
 
     const newUser = new User({
       name,
-      systemRol,
+      systemRol: role,
       avatar,
       email,
       password: hashPassword,

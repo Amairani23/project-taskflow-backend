@@ -12,7 +12,9 @@ const validateURL = (value, helpers) => {
 const validarUsuario = celebrate({
   body: Joi.object().keys({
     name: Joi.string().min(2).max(30),
-    systemRol: Joi.string().min(2).max(30),
+    systemRol: Joi.string()
+      .valid("colaborador", "admin")
+      .default("colaborador"),
     avatar: Joi.string().custom(validateURL),
     email: Joi.string().email().required(),
     password: Joi.string().required(),
